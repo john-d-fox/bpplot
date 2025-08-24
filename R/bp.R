@@ -1,39 +1,62 @@
-# Arguments
-# ---------
-# files: character vector of (paths to) BP files
-# legend: show a legend (or label systolic and diastolic directly)?
-# smooth: show loess smooths?
-# span: for loess smooths; if there is more than one, the span is
-#       selected by 10-fold cross-validation
-# confint: show pointwise confidence envelope(s) around smooths?
-# levels: for confidence envelope(s)
-# alpha: transparency for confidence envelopes (cumulative)
-# vlines: list of lists for vertical lines to draw
-#         ("at" component of each sub-list), labels for
-#         the lines ("text" component), and (optionally, "at" component)
-#         for vertical adjustment of text
-#
-bpPlot(c("2025-03.txt", "2025-04.txt", "2025-05.txt",
-"2025-06.txt", "2025-07.txt", "2025-08.txt"),
-span=0.2, legend=TRUE,
-vlines=list(list(at="2025-07-08",
-                 text="pause \u2192\nLenvima "),
-            list(at="2025-07-15",
-                 text="resume\u2192\nLenvima ",
-                 adjust=15)
-            #             list(at="2025-06-07",
-            #                  text="stop\u2192\nRitalin "),
-            #             list(at="2025-06-20",
-            #                  text="restart\u2192\nRitalin ")
-)
-)
+#' Plot Daily Blood-Pressure Readings
+#'
+#' @param files character vector of (paths to) BP files.
+#' @param legend (logical) if \code{TRUE} (the default) show a legend; if \code{FALSE} label
+#'        systolic and diastolic values directly.
+#' @param smooth (logical) show loess smooths (default \code{TRUE} if there are
+#'        at least 15 dates)?
+#' @param span for loess smooths; if there is more than one, the span is
+#'        selected by 10-fold cross-validation; the default is 9 values
+#'        between 0.1 and 0.9. Cross-validation doesn't work well if there
+#'        are discontinuities.
+#' @param confint (logical) show pointwise confidence envelope(s) around smooths?
+#'        the default is the value of \code{smooth}.
+#' @param level for confidence envelope(s); the default is 0.5 and 0.9.
+#' @param alpha transparency for confidence envelopes (cumulative); the default
+#'        is 0.25.
+#' @param vlines list of lists for vertical lines to draw
+#'        (the \code{"at"} component of each sub-list), labels for
+#'        the lines (the \code{"text"} component), and (optionally, the
+#'        \code{"at"} component) for vertical adjustment of text;
+#'        see examples.
+#'
+#' @returns invisibly returns a data frame with columns for date, systolic
+#'          blood pressure, and diastolic blood pressure.
+#'          If cross-validation is used to pick the span, a table of spans
+#'          and CV mean-squared error values is printed.
+#'
+#' @description
+#' \code{bpplot()} graphs daily blood-pressure readings. For more detailed
+#' analysis of blood-pressure data, see the \pkg{bp} package
+#' (\url{https://github.com/johnschwenck/bp} and \url{https://cran.r-project.org/package=bp}).
+#'
+#' @examples
+#' dir <- system.file("etc", package="bpplot")
+#' (files <- list.files(dir))
+#' files <- paste0(dir, "/", files)
+#' head(read.table(files[2], header=TRUE, fill=TRUE))
+#'
+#' bpplot(files[3:5],
+#'        span=0.2,
+#'        vlines=list(list(at="2025-07-08",
+#'                         text="pause \u2192\nDrug      "),
+#'                    list(at="2025-07-15",
+#'                         text="resume\u2192\nDrug      ",
+#'                         adjust=15))
+#' )
+#'
+#' bpplot(files[1:3], legend=FALSE)
 
 
 #' @export
-bpPlot <- function(files, legend=FALSE,
-                   smooth = nrow(BP) >= 15, span=seq(0.1, 0.9, by = 0.1),
-                   confint=TRUE, level=c(0.5, 0.9), alpha=0.25,
-                   vlines=NULL){
+bpplot <- function(files,
+                   legend = TRUE,
+                   smooth = nrow(BP) >= 15,
+                   span = seq(0.1, 0.9, by = 0.1),
+                   confint = smooth,
+                   level = c(0.5, 0.9),
+                   alpha = 0.25,
+                   vlines = NULL){
 
   BP <- read.table(files[1], header=TRUE, fill=TRUE)
   for (file in files[-1]){
@@ -59,7 +82,6 @@ bpPlot <- function(files, legend=FALSE,
     if (smooth){
 
        if ((nmods <- length(span)) > 1){
-         source("cv.loess.R")
          mods <- vector(nmods, mode="list")
          for (i in 1:nmods){
            cmd <- paste0('loess(sys ~ as.numeric(date), data=BP, span=', span[i],
@@ -107,7 +129,7 @@ bpPlot <- function(files, legend=FALSE,
     }
 
     if (legend){
-      legend(as.Date("2025-03-20"), mean(par("usr")[3:4]),
+      legend(min(date), mean(par("usr")[3:4]),
              legend=c("Systolic", "Diastolic"), lty=1:2,
              col=c("blue", "magenta"), text.col=c("blue", "magenta"),
              pch=16:17, bty="n")
@@ -143,5 +165,56 @@ bpPlot <- function(files, legend=FALSE,
 
   })
 
+  return(invisible(BP))
+
 }
 
+#' @importFrom stats coef loess na.omit predict start update
+#' @importFrom utils read.table globalVariables
+#' @exportS3Method cv::cv
+cv.loess <- function(model, data = insight::get_data(model), criterion = cv::mse,
+                     k = 10L, reps = 1L, seed = NULL, details = k <= 10L, confint = n >=
+                       400L, level = 0.95, ...) {
+
+  f <- function(i_, ...) {
+    # helper function to compute cv criterion for each fold
+    indices.i <- fold(folds, i_)
+    model.i <- if (start) {
+      update(model, data = data[-indices.i,], start = b)
+    } else {
+      update(model, data = data[-indices.i,])
+    }
+    fit.all.i <- predict(model.i, newdata = data, type = type, ...)
+    fit.i <- fit.all.i[indices.i]
+    NAs <- is.na(fit.i)
+    fit.i[NAs] <- y[indices.i][NAs]
+    # browser()
+    list(
+      fit.i = fit.i,
+      crit.all.i = criterion(y, fit.all.i),
+      coef.i = coef(model.i)
+    )
+  }
+
+  n <- nrow(data)
+
+  cv::cvCompute(
+    model = model,
+    data = data,
+    criterion = criterion,
+    k = k,
+    reps = reps,
+    seed = seed,
+    details = details,
+    confint = confint,
+    level = level,
+    ncores = 1L,
+    f = f,
+    model.function = loess,
+    model.function.name = "loess",
+    ...
+  )
+
+}
+
+globalVariables(c("fold", "folds", "b", "type", "y"))
