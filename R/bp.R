@@ -60,7 +60,7 @@
 #' @export
 bpplot <- function(files,
                    legend = TRUE,
-                   smooth = nrow(BP) >= 15,
+                   smooth = nrow(BP) >= 15L,
                    span = seq(0.1, 0.9, by = 0.1),
                    confint = smooth,
                    level = c(0.5, 0.9),
@@ -83,12 +83,12 @@ bpplot <- function(files,
                     ', degree=1, family="symmetric")')
       mods[[i]] <- eval(parse(text=cmd))
       r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
-      nr <- min(length(r) - 1, nr)
-      autocor[i, 1L:nr] <- r[2L:(nr + 1)]
+      nr <- min(length(r) - 1L, nr)
+      autocor[i, 1L:nr] <- r[2L:(nr + 1L)]
     }
     cvs <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
-    cvs <-  cbind(span, cvs, round(autocor, 2))
-    colnames(cvs) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
+    cvs <-  cbind(span, cvs, round(autocor, 2L))
+    colnames(cvs) <- c("span", "CV MSE", paste0("r[", 1L:nr, "]"))
     rownames(cvs) <- rep("", nrow(cvs))
     cat("\nFor smooths fit to the", series, "data with",
         "residual autocorrelations:\n")
@@ -99,10 +99,10 @@ bpplot <- function(files,
   autocor <- function(series){
     response <- if (series == "systolic") BP$sys else BP$dia
     mod <- loess(response ~ as.numeric(date), data=BP, span=span,
-                 degree=1, family="symmetric")
+                 degree=1L, family="symmetric")
     r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
-    nr <- min(length(r) - 1, 10L)
-    r <- round(r[2L:(nr + 1)], 2)
+    nr <- min(length(r) - 1L, 10L)
+    r <- round(r[2L:(nr + 1L)], 2L)
     names(r) <- paste0("r[", 1L:nr, "]")
     cat("\nResidual autocorrelations for the", series, "data:\n")
     print(r)
@@ -110,8 +110,8 @@ bpplot <- function(files,
 
   nmods <- length(span)
 
-  BP <- read.table(files[1], header=TRUE, fill=TRUE)
-  for (file in files[-1]){
+  BP <- read.table(files[1L], header=TRUE, fill=TRUE)
+  for (file in files[-1L]){
     bp <- read.table(file, header=TRUE, fill=TRUE)
     BP <- rbind(BP, bp)
   }
@@ -121,18 +121,18 @@ bpplot <- function(files,
   with(BP, {
     plot(range(date), range(c(sys, dia)), type="n",
          xlab=xlab, ylab=ylab, xaxt="n", yaxt="n")
-    lines(date, sys, lty=1, col="blue", type="b", pch=16)
-    lines(date, dia, lty=2, col="magenta", type="b", pch=17)
-    ticks <- axis.Date(1, date, format="%Y-%m-%d")
-    axis(2, at=seq(60, 160, by=10), las=1)
+    lines(date, sys, lty=1L, col="blue", type="b", pch=16L)
+    lines(date, dia, lty=2L, col="magenta", type="b", pch=17L)
+    ticks <- axis.Date(1L, date, format="%Y-%m-%d")
+    axis(2, at=seq(60, 160, by=10), las=1L)
     abline(h=seq(60, 160, by=10), col="gray30", lty="dotted")
     abline(v=ticks, col="gray30", lty="dotted")
-    abline(h=120, col="blue", lty=3)
-    abline(h=80, col="magenta", lty=3)
+    abline(h=120, col="blue", lty=3L)
+    abline(h=80, col="magenta", lty=3L)
 
     if (smooth){
 
-       if (nmods > 1){
+       if (nmods > 1L){
 
          span.sys <- crossvalidate("systolic")
          span.dia <- crossvalidate("diastolic")
@@ -147,8 +147,8 @@ bpplot <- function(files,
 
       main <- if (show.main) {
        paste0("robust local linear regression (span sys. = ",
-              round(span.sys, 2), ", dia. = ",
-              round(span.dia, 2), ")")
+              round(span.sys, 2L), ", dia. = ",
+              round(span.dia, 2L), ")")
       } else {
         ""
       }
@@ -164,8 +164,8 @@ bpplot <- function(files,
       if (confint){
         if (show.main){
           main <- paste0(main, "\nconfidence envelope",
-                         if (length(level) > 1) "s",
-                         " (level", if (length(level) > 1) "s", " = ",
+                         if (length(level) > 1L) "s",
+                         " (level", if (length(level) > 1L) "s", " = ",
                          paste(level, collapse=(", " )), ")")
         }
         for (lev in level){
@@ -181,25 +181,25 @@ bpplot <- function(files,
         }
       }
 
-      title(main=main, cex.main=1, font.main=1)
+      title(main=main, cex.main=1, font.main=1L)
 
     }
 
     if (legend){
-      legend(min(date), mean(par("usr")[3:4]),
-             legend=c("Systolic", "Diastolic"), lty=1:2,
+      legend(min(date), mean(par("usr")[3L:4L]),
+             legend=c("Systolic", "Diastolic"), lty=1L:2L,
              col=c("blue", "magenta"), text.col=c("blue", "magenta"),
-             pch=16:17, bty="n")
+             pch=16L:17L, bty="n")
     } else{
       s.min <- which.min(sys)
       pos <- as.numeric(date[s.min]) >
-        mean(as.numeric(date[1]), as.numeric(date[length(date)]))
+        mean(as.numeric(date[1L]), as.numeric(date[length(date)]))
       text(date[s.min], sys[s.min], labels="Systolic",
            col="blue", offset=1, xpd=TRUE,
            adj = if (pos) c(0, 1.5) else c(1, 1.5))
       d.max <- which.max(dia)
       pos <- as.numeric(date[d.max]) >
-        mean(as.numeric(date[1]), as.numeric(date[length(date)]))
+        mean(as.numeric(date[1L]), as.numeric(date[length(date)]))
       text(date[d.max], dia[d.max], labels="Diastolic",
            col="magenta", offset=1, xpd=TRUE,
            adj = if (pos) c(1, -1) else c(0, -1))
@@ -209,8 +209,8 @@ bpplot <- function(files,
       for (vline in vlines){
         at <- as.numeric(as.Date(vline[["at"]]))
         pos <- if (at >
-          mean(as.numeric(date[1]),
-               as.numeric(date[length(date)]))) 2 else 4
+          mean(as.numeric(date[1L]),
+               as.numeric(date[length(date)]))) 2L else 4L
         abline(v=at, col="gray30")
         adjust <- vline[["adjust"]]
         if (is.null(adjust)) adjust <- 0

@@ -7,7 +7,7 @@
 bpplot(
   files,
   legend = TRUE,
-  smooth = nrow(BP) >= 15,
+  smooth = nrow(BP) >= 15L,
   span = seq(0.1, 0.9, by = 0.1),
   confint = smooth,
   level = c(0.5, 0.9),
