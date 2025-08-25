@@ -34,7 +34,7 @@
 #'
 #' @examples
 #' dir <- system.file("etc", package="bpplot")
-#' (files <- list.files(dir))
+#' (files <- list.files(dir)) # example data files provided
 #' files <- paste0(dir, "/", files)
 #' cat(paste(readLines(files[5], 10), "\n")) # part of one data file
 #'
