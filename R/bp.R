@@ -48,9 +48,9 @@
 #' bpplot(files[3:5],
 #'        span=0.3, # picked to smooth across discontinuity
 #'        vlines=list(list(at="2025-07-08",
-#'                         text="pause \u2192\nDrug      "),
+#'                         text="pause \u2192\ndrug      "),
 #'                    list(at="2025-07-15",
-#'                         text="resume\u2192\nDrug      ",
+#'                         text="resume\u2192\ndrug      ",
 #'                         adjust=15))
 #' )
 #'
@@ -70,6 +70,45 @@ bpplot <- function(files,
                    ylab = "Blood Pressure (mm Hg)",
                    show.main = TRUE
                      ){
+
+  # local helper functions
+
+  crossvalidate <- function(series){
+    response <- if (series == "systolic") "sys" else "dia"
+    mods <- vector(nmods, mode="list")
+    autocor <- matrix(0, nmods, 10L)
+    nr <- 10L
+    for (i in 1L:nmods){
+      cmd <- paste0('loess(', response, ' ~ as.numeric(date), data=BP, span=', span[i],
+                    ', degree=1, family="symmetric")')
+      mods[[i]] <- eval(parse(text=cmd))
+      r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
+      nr <- min(length(r) - 1, nr)
+      autocor[i, 1L:nr] <- r[2L:(nr + 1)]
+    }
+    cvs <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
+    cvs <-  cbind(span, cvs, round(autocor, 2))
+    colnames(cvs) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
+    rownames(cvs) <- rep("", nrow(cvs))
+    cat("\nFor smooths fit to the", series, "data with",
+        "residual autocorrelations:\n")
+    print(cvs)
+    span[which.min(cvs[, "CV MSE"])]
+  }
+
+  autocor <- function(series){
+    response <- if (series == "systolic") BP$sys else BP$dia
+    mod <- loess(response ~ as.numeric(date), data=BP, span=span,
+                 degree=1, family="symmetric")
+    r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
+    nr <- min(length(r) - 1, 10L)
+    r <- round(r[2L:(nr + 1)], 2)
+    names(r) <- paste0("r[", 1L:nr, "]")
+    cat("\nResidual autocorrelations for the", series, "data:\n")
+    print(r)
+  }
+
+  nmods <- length(span)
 
   BP <- read.table(files[1], header=TRUE, fill=TRUE)
   for (file in files[-1]){
@@ -93,67 +132,17 @@ bpplot <- function(files,
 
     if (smooth){
 
-       if ((nmods <- length(span)) > 1){
-         mods <- vector(nmods, mode="list")
-         autocor.dia <- autocor.sys <- matrix(0, nmods, 10L)
+       if (nmods > 1){
 
-         nr <- 10L
-         for (i in 1L:nmods){
-           cmd <- paste0('loess(sys ~ as.numeric(date), data=BP, span=', span[i],
-                         ', degree=1, family="symmetric")')
-           mods[[i]] <- eval(parse(text=cmd))
-           r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
-           nr <- min(length(r) - 1, nr)
-           autocor.sys[i, 1L:nr] <- r[2L:(nr + 1)]
-         }
-         cvs.sys <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
-         cvs.sys <-  cbind(span, cvs.sys, round(autocor.sys, 2))
-         colnames(cvs.sys) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
-         rownames(cvs.sys) <- rep("", nrow(cvs.sys))
-         cat("\nFor smooths fit to the systolic data with",
-             "residual autocorrelations:\n")
-         print(cvs.sys)
-         span.sys <- span[which.min(cvs.sys[, "CV MSE"])]
-
-         nr <- 10L
-         for (i in 1L:nmods){
-           cmd <- paste0('loess(dia ~ as.numeric(date), data=BP, span=', span[i],
-                         ', degree=1, family="symmetric")')
-           mods[[i]] <- eval(parse(text=cmd))
-           r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
-           nr <- min(length(r) - 1, nr)
-           autocor.dia[i, 1L:nr] <- r[2L:(nr + 1)]
-         }
-         cvs.dia <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
-         cvs.dia <-  cbind(span, cvs.dia, round(autocor.dia, 2))
-         colnames(cvs.dia) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
-         rownames(cvs.dia) <- rep("", nrow(cvs.dia))
-         cat("\nFor smooths fit to the diastolic data with",
-             "residual autocorrelations:\n")
-         print(cvs.dia)
-         span.dia <- span[which.min(cvs.dia[, "CV MSE"])]
+         span.sys <- crossvalidate("systolic")
+         span.dia <- crossvalidate("diastolic")
 
        } else {
 
-         mod <- loess(sys ~ as.numeric(date), data=BP, span=span,
-                    degree=1, family="symmetric")
-         r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
-         nr <- min(length(r) - 1, 10L)
-         r <- round(r[2L:(nr + 1)], 2)
-         names(r) <- paste0("r[", 1L:nr, "]")
-         cat("\nResidual autocorrelations for the systolic data:\n")
-         print(r)
-         span.sys <- span
+         autocor("systolic")
+         autocor("diastolic")
+         span.sys <- span.dia <- span
 
-         mod <- loess(dia ~ as.numeric(date), data=BP, span=span,
-                      degree=1, family="symmetric")
-         r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
-         nr <- min(length(r) - 1, 10L)
-         r <- round(r[2L:(nr + 1)], 2)
-         names(r) <- paste0("r[", 1L:nr, "]")
-         cat("\nResidual autocorrelations for the diastolic data:\n")
-         print(r)
-         span.dia <- span
        }
 
       main <- if (show.main) {
@@ -237,8 +226,8 @@ bpplot <- function(files,
 
 }
 
-#' @importFrom stats coef loess na.omit predict start update
-#' @importFrom utils read.table globalVariables
+#' @importFrom stats acf coef loess na.omit predict residuals start update
+#' @importFrom utils globalVariables read.table
 #' @exportS3Method cv::cv
 cv.loess <- function(model, data = insight::get_data(model), criterion = cv::mse,
                      k = 10L, reps = 1L, seed = NULL, details = k <= 10L, confint = n >=

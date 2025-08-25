@@ -77,9 +77,9 @@ cat(paste(readLines(files[5], 10), "\n")) # part of one data file
 bpplot(files[3:5],
        span=0.3, # picked to smooth across discontinuity
        vlines=list(list(at="2025-07-08",
-                        text="pause \u2192\nDrug      "),
+                        text="pause \u2192\ndrug      "),
                    list(at="2025-07-15",
-                        text="resume\u2192\nDrug      ",
+                        text="resume\u2192\ndrug      ",
                         adjust=15))
 )
 
