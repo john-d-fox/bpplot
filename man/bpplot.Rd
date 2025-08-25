@@ -29,13 +29,14 @@ at least 15 dates)?}
 
 \item{span}{for loess smooths; if there is more than one, the span is
 selected by 10-fold cross-validation; the default is 9 values
-between 0.1 and 0.9. Cross-validation doesn't work well if there
-are discontinuities. At present, the systolic data are used to
-pick the span.}
+between 0.1 and 0.9. In this case, the spans for systolic and diastolic
+measurements are selected separately. Cross-validation doesn't
+work well if there are discontinuities.}
 
 \item{confint}{(logical) show pointwise confidence envelope(s) around smooths?
-the default is the value of \code{smooth}. The confidence envelope
-assumes independent errors, which isn't generally the case.}
+the default is the value of \code{smooth}. The confidence envelopes
+assume independent errors, which isn't generally the case (see the
+residual autocorrelations).}
 
 \item{level}{for confidence envelope(s); the default is 0.5 and 0.9.}
 
@@ -55,10 +56,10 @@ see examples.}
 \value{
 invisibly returns a data frame with columns for date, systolic
 blood pressure, and diastolic blood pressure.
-If cross-validation is used to pick the span, a table of spans
-and CV mean-squared error values for the systolic data is printed,
-along with residual autocorrelations.
-Otherwise, just the residual autocorrelations for the systolic
+If cross-validation is used to pick the spans, tables of spans
+and CV mean-squared error values for the systolic  and diastolic
+data are printed, along with residual autocorrelations.
+Otherwise, just the residual autocorrelations for the
 data are printed. The latter can be distorted if there are
 discontinuities.
 }

@@ -7,12 +7,13 @@
 #'        at least 15 dates)?
 #' @param span for loess smooths; if there is more than one, the span is
 #'        selected by 10-fold cross-validation; the default is 9 values
-#'        between 0.1 and 0.9. Cross-validation doesn't work well if there
-#'        are discontinuities. At present, the systolic data are used to
-#'        pick the span.
+#'        between 0.1 and 0.9. In this case, the spans for systolic and diastolic
+#'        measurements are selected separately. Cross-validation doesn't
+#'        work well if there are discontinuities.
 #' @param confint (logical) show pointwise confidence envelope(s) around smooths?
-#'        the default is the value of \code{smooth}. The confidence envelope
-#'        assumes independent errors, which isn't generally the case.
+#'        the default is the value of \code{smooth}. The confidence envelopes
+#'        assume independent errors, which isn't generally the case (see the
+#'        residual autocorrelations).
 #' @param level for confidence envelope(s); the default is 0.5 and 0.9.
 #' @param alpha transparency for confidence envelopes (cumulative); the default
 #'        is 0.25.
@@ -26,10 +27,10 @@
 #'
 #' @returns invisibly returns a data frame with columns for date, systolic
 #'          blood pressure, and diastolic blood pressure.
-#'          If cross-validation is used to pick the span, a table of spans
-#'          and CV mean-squared error values for the systolic data is printed,
-#'          along with residual autocorrelations.
-#'          Otherwise, just the residual autocorrelations for the systolic
+#'          If cross-validation is used to pick the spans, tables of spans
+#'          and CV mean-squared error values for the systolic  and diastolic
+#'          data are printed, along with residual autocorrelations.
+#'          Otherwise, just the residual autocorrelations for the
 #'          data are printed. The latter can be distorted if there are
 #'          discontinuities.
 #'
@@ -94,7 +95,8 @@ bpplot <- function(files,
 
        if ((nmods <- length(span)) > 1){
          mods <- vector(nmods, mode="list")
-         autocor <- matrix(0, nmods, 10L)
+         autocor.dia <- autocor.sys <- matrix(0, nmods, 10L)
+
          nr <- 10L
          for (i in 1L:nmods){
            cmd <- paste0('loess(sys ~ as.numeric(date), data=BP, span=', span[i],
@@ -102,17 +104,37 @@ bpplot <- function(files,
            mods[[i]] <- eval(parse(text=cmd))
            r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
            nr <- min(length(r) - 1, nr)
-           autocor[i, 1L:nr] <- r[2L:(nr + 1)]
+           autocor.sys[i, 1L:nr] <- r[2L:(nr + 1)]
          }
-         cvs <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
-         cvs <-  cbind(span, cvs, round(autocor, 2))
-         colnames(cvs) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
-         rownames(cvs) <- rep("", nrow(cvs))
+         cvs.sys <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
+         cvs.sys <-  cbind(span, cvs.sys, round(autocor.sys, 2))
+         colnames(cvs.sys) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
+         rownames(cvs.sys) <- rep("", nrow(cvs.sys))
          cat("\nFor smooths fit to the systolic data with",
              "residual autocorrelations:\n")
-         print(cvs)
-         span <- span[which.min(cvs[, "CV MSE"])]
+         print(cvs.sys)
+         span.sys <- span[which.min(cvs.sys[, "CV MSE"])]
+
+         nr <- 10L
+         for (i in 1L:nmods){
+           cmd <- paste0('loess(dia ~ as.numeric(date), data=BP, span=', span[i],
+                         ', degree=1, family="symmetric")')
+           mods[[i]] <- eval(parse(text=cmd))
+           r <- as.vector(acf(residuals(mods[[i]]), plot=FALSE)$acf)
+           nr <- min(length(r) - 1, nr)
+           autocor.dia[i, 1L:nr] <- r[2L:(nr + 1)]
+         }
+         cvs.dia <- sapply(mods, function (m) cv::cv(m, k="n")$"CV crit")
+         cvs.dia <-  cbind(span, cvs.dia, round(autocor.dia, 2))
+         colnames(cvs.dia) <- c("span", "CV MSE", paste0("r[", 1:nr, "]"))
+         rownames(cvs.dia) <- rep("", nrow(cvs.dia))
+         cat("\nFor smooths fit to the diastolic data with",
+             "residual autocorrelations:\n")
+         print(cvs.dia)
+         span.dia <- span[which.min(cvs.dia[, "CV MSE"])]
+
        } else {
+
          mod <- loess(sys ~ as.numeric(date), data=BP, span=span,
                     degree=1, family="symmetric")
          r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
@@ -121,17 +143,29 @@ bpplot <- function(files,
          names(r) <- paste0("r[", 1L:nr, "]")
          cat("\nResidual autocorrelations for the systolic data:\n")
          print(r)
+         span.sys <- span
+
+         mod <- loess(dia ~ as.numeric(date), data=BP, span=span,
+                      degree=1, family="symmetric")
+         r <- as.vector(acf(residuals(mod), plot=FALSE)$acf)
+         nr <- min(length(r) - 1, 10L)
+         r <- round(r[2L:(nr + 1)], 2)
+         names(r) <- paste0("r[", 1L:nr, "]")
+         cat("\nResidual autocorrelations for the diastolic data:\n")
+         print(r)
+         span.dia <- span
        }
 
       main <- if (show.main) {
-       paste0("robust local linear regression (span = ",
-                     round(span, 2), ")")
+       paste0("robust local linear regression (span sys. = ",
+              round(span.sys, 2), ", dia. = ",
+              round(span.dia, 2), ")")
       } else {
         ""
       }
-      lo.sys <- loess(sys ~ as.numeric(date), data=BP, span=span,
+      lo.sys <- loess(sys ~ as.numeric(date), data=BP, span=span.sys,
                       degree=1, family="symmetric")
-      lo.dia <- loess(dia ~ as.numeric(date), data=BP, span=span,
+      lo.dia <- loess(dia ~ as.numeric(date), data=BP, span=span.dia,
                       degree=1, family="symmetric")
       sys.fit <- predict(lo.sys, newdata=data.frame(date=BP$date), se=TRUE)
       dia.fit <- predict(lo.dia, newdata=data.frame(date=BP$date), se=TRUE)
