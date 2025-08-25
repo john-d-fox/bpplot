@@ -8,6 +8,6 @@ Description: Creates daily blood-pressure graphs, with loess smooths, point-wide
 License: GPL (>= 2)
 Encoding: UTF-8
 Imports: cv, insight, stats, utils
-Language: en-US
+Language: en-CA
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
