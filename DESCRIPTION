@@ -1,7 +1,7 @@
 Package: bpplot
 Title: Create Daily Blood-Pressure Graphs
 Version: 0.1.0
-Date: 2025-08-24
+Date: 2025-08-25
 Authors@R: person("John", "Fox", role = c("aut", "cre"), email = "jfox@mcmaster.ca",
   comment = c(ORCID = "0000-0002-1196-8012"))
 Description: Creates daily blood-pressure graphs, with loess smooths, point-wide confidence bands, and optional annotations.

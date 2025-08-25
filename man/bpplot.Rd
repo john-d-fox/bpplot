@@ -30,10 +30,12 @@ at least 15 dates)?}
 \item{span}{for loess smooths; if there is more than one, the span is
 selected by 10-fold cross-validation; the default is 9 values
 between 0.1 and 0.9. Cross-validation doesn't work well if there
-are discontinuities.}
+are discontinuities. At present, the systolic data are used to
+pick the span.}
 
 \item{confint}{(logical) show pointwise confidence envelope(s) around smooths?
-the default is the value of \code{smooth}.}
+the default is the value of \code{smooth}. The confidence envelope
+assumes independent errors, which isn't generally the case.}
 
 \item{level}{for confidence envelope(s); the default is 0.5 and 0.9.}
 
@@ -54,7 +56,11 @@ see examples.}
 invisibly returns a data frame with columns for date, systolic
 blood pressure, and diastolic blood pressure.
 If cross-validation is used to pick the span, a table of spans
-and CV mean-squared error values is printed.
+and CV mean-squared error values for the systolic data is printed,
+along with residual autocorrelations.
+Otherwise, just the residual autocorrelations for the systolic
+data are printed. The latter can be distorted if there are
+discontinuities.
 }
 \description{
 \code{bpplot()} graphs daily blood-pressure readings. For more detailed
@@ -68,7 +74,7 @@ files <- paste0(dir, "/", files)
 cat(paste(readLines(files[5], 10), "\n")) # part of one data file
 
 bpplot(files[3:5],
-       span=0.3,
+       span=0.3, # picked to smooth across discontinuity
        vlines=list(list(at="2025-07-08",
                         text="pause \u2192\nDrug      "),
                    list(at="2025-07-15",
