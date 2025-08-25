@@ -12,7 +12,10 @@ bpplot(
   confint = smooth,
   level = c(0.5, 0.9),
   alpha = 0.25,
-  vlines = NULL
+  vlines = NULL,
+  xlab = "Date",
+  ylab = "Blood Pressure (mm Hg)",
+  show.main = TRUE
 )
 }
 \arguments{
@@ -42,6 +45,10 @@ is 0.25.}
 the lines (the \code{"text"} component), and (optionally, the
 \code{"at"} component) for vertical adjustment of text;
 see examples.}
+
+\item{xlab, ylab}{horizontal axis and vertical axis labels.}
+
+\item{show.main}{display main label (logical, default \code{TRUE}).}
 }
 \value{
 invisibly returns a data frame with columns for date, systolic
@@ -58,10 +65,10 @@ analysis of blood-pressure data, see the \pkg{bp} package
 dir <- system.file("etc", package="bpplot")
 (files <- list.files(dir))
 files <- paste0(dir, "/", files)
-head(read.table(files[2], header=TRUE, fill=TRUE))
+cat(paste(readLines(files[5], 10), "\n")) # part of one data file
 
 bpplot(files[3:5],
-       span=0.2,
+       span=0.3,
        vlines=list(list(at="2025-07-08",
                         text="pause \u2192\nDrug      "),
                    list(at="2025-07-15",

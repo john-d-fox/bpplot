@@ -19,6 +19,8 @@
 #'        the lines (the \code{"text"} component), and (optionally, the
 #'        \code{"at"} component) for vertical adjustment of text;
 #'        see examples.
+#' @param xlab,ylab horizontal axis and vertical axis labels.
+#' @param show.main display main label (logical, default \code{TRUE}).
 #'
 #' @returns invisibly returns a data frame with columns for date, systolic
 #'          blood pressure, and diastolic blood pressure.
@@ -34,10 +36,10 @@
 #' dir <- system.file("etc", package="bpplot")
 #' (files <- list.files(dir))
 #' files <- paste0(dir, "/", files)
-#' head(read.table(files[2], header=TRUE, fill=TRUE))
+#' cat(paste(readLines(files[5], 10), "\n")) # part of one data file
 #'
 #' bpplot(files[3:5],
-#'        span=0.2,
+#'        span=0.3,
 #'        vlines=list(list(at="2025-07-08",
 #'                         text="pause \u2192\nDrug      "),
 #'                    list(at="2025-07-15",
@@ -56,7 +58,11 @@ bpplot <- function(files,
                    confint = smooth,
                    level = c(0.5, 0.9),
                    alpha = 0.25,
-                   vlines = NULL){
+                   vlines = NULL,
+                   xlab = "Date",
+                   ylab = "Blood Pressure (mm Hg)",
+                   show.main = TRUE
+                     ){
 
   BP <- read.table(files[1], header=TRUE, fill=TRUE)
   for (file in files[-1]){
@@ -69,7 +75,7 @@ bpplot <- function(files,
   with(BP, {
 
     plot(range(date), range(c(sys, dia)), type="n",
-         xlab="Date", ylab="Blood Pressure", xaxt="n", yaxt="n")
+         xlab=xlab, ylab=ylab, xaxt="n", yaxt="n")
     lines(date, sys, lty=1, col="blue", type="b", pch=16)
     lines(date, dia, lty=2, col="magenta", type="b", pch=17)
     ticks <- axis.Date(1, date, format="%Y-%m-%d")
@@ -95,8 +101,12 @@ bpplot <- function(files,
          span <- span[which.min(cvs[, "CV MSE"])]
        }
 
-      main <- paste0("robust local linear regression (span = ",
+      main <- if (show.main) {
+       paste0("robust local linear regression (span = ",
                      round(span, 2), ")")
+      } else {
+        ""
+      }
       lo.sys <- loess(sys ~ as.numeric(date), data=BP, span=span,
                       degree=1, family="symmetric")
       lo.dia <- loess(dia ~ as.numeric(date), data=BP, span=span,
@@ -107,10 +117,12 @@ bpplot <- function(files,
       lines(date, dia.fit$fit, col="magenta", lwd=2)
 
       if (confint){
-        main <- paste0(main, "\nconfidence envelope",
-                       if (length(level) > 1) "s",
-                       " (level", if (length(level) > 1) "s", " = ",
-                       paste(level, collapse=(", " )), ")")
+        if (show.main){
+          main <- paste0(main, "\nconfidence envelope",
+                         if (length(level) > 1) "s",
+                         " (level", if (length(level) > 1) "s", " = ",
+                         paste(level, collapse=(", " )), ")")
+        }
         for (lev in level){
           z <- qnorm((1 - lev)/2, lower.tail=FALSE)
           sys.band <- c(sys.fit$fit + z*sys.fit$se,
@@ -180,15 +192,14 @@ cv.loess <- function(model, data = insight::get_data(model), criterion = cv::mse
     # helper function to compute cv criterion for each fold
     indices.i <- fold(folds, i_)
     model.i <- if (start) {
-      update(model, data = data[-indices.i,], start = b)
+      update(model, data = data[-indices.i, ], start = b)
     } else {
-      update(model, data = data[-indices.i,])
+      update(model, data = data[-indices.i, ])
     }
     fit.all.i <- predict(model.i, newdata = data, type = type, ...)
     fit.i <- fit.all.i[indices.i]
     NAs <- is.na(fit.i)
     fit.i[NAs] <- y[indices.i][NAs]
-    # browser()
     list(
       fit.i = fit.i,
       crit.all.i = criterion(y, fit.all.i),
