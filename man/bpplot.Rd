@@ -6,6 +6,7 @@
 \usage{
 bpplot(
   files,
+  date.range,
   legend = TRUE,
   smooth = nrow(BP) >= 15L,
   span = seq(0.1, 0.9, by = 0.1),
@@ -19,7 +20,11 @@ bpplot(
 )
 }
 \arguments{
-\item{files}{character vector of (paths to) BP files.}
+\item{files}{character vector of (paths to) blood-pressure data file(s) (see Details).}
+
+\item{date.range}{a two-element character vector with the start and end
+dates for the graph (coercible to \code{Date} objects);
+if omitted (the usual case), the range of dates in the data is used.}
 
 \item{legend}{(logical) if \code{TRUE} (the default) show a legend; if \code{FALSE} label
 systolic and diastolic values directly.}
@@ -67,6 +72,14 @@ discontinuities.
 \code{bpplot()} graphs daily blood-pressure readings. For more detailed
 analysis of blood-pressure data, see the \pkg{bp} package
 (\url{https://github.com/johnschwenck/bp} and \url{https://cran.r-project.org/package=bp}).
+}
+\details{
+The blood-pressure data file or files are plain-text files with
+one row for each day, and three columns, giving the date (a character string
+coercible to a \code{Date} object), and systolic and diastolic blood-pressure readings.
+Blank and \code{NA} values are allowed. The initial line in each
+file contains the variable names \code{date}, \code{sys}, and \code{dia}.
+See the examples.
 }
 \examples{
 dir <- system.file("etc", package="bpplot")
